@@ -21,8 +21,7 @@ def mass2moleconc_core(cO, cSi, cMgO):
     cbarMgO= cMgO/ (AMgO/Abar)    
     return cbarO, cbarSi, cbarMgO
 
-def logKd_ideal(a, b, c, Tcmb): 
-    P = 135
+def logKd_ideal(a, b, c, Tcmb, P=135): 
     return a + (b/Tcmb) + (c*P/Tcmb)
 
 def ln_gamma_Fe(X,eps,v):
