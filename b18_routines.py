@@ -73,7 +73,9 @@ def ln_gamma_Fe(X,eps,v):
 def ln_gamma_i(X, eps, lngammaFe, lngammai0, v):
     
     T1,T2,T3 = np.zeros(len(X)),np.zeros(len(X)),np.zeros(len(X))
-
+    tmp2 = np.zeros([len(X), len(X)])
+    tmp3 = np.zeros([len(X), len(X)])
+    
     i = 0
     for xi in X:   
         if xi == 0 : 
@@ -96,6 +98,8 @@ def ln_gamma_i(X, eps, lngammaFe, lngammai0, v):
                     ( 1.0 + np.log(1-xj)/xj - 1.0/(1-X[i]) )
             T3[i] = T3[i] + eps[i,j] * X[i] * xj**2 * \
                 ( 1.0/(1-X[i]) + 1.0/(1-xj) + X[i]/(2*(1-X[i])**2) - 1.0)
+            tmp2[i,j] = eps[i,j] * xj * ( 1.0 + np.log(1-xj)/xj - 1.0/(1-X[i]) )
+            tmp3[i,j] = eps[i,j] * X[i] * xj**2 * ( 1.0/(1-X[i]) + 1.0/(1-xj) + X[i]/(2*(1-X[i])**2) - 1.0)
             j = j + 1
         
         if v == 1:
@@ -103,5 +107,9 @@ def ln_gamma_i(X, eps, lngammaFe, lngammai0, v):
               .format(i, T1[i], T2[i], T3[i]))
             
         i = i + 1
+ 
+    if v == 1:
+        print('Sum2 = ', tmp2)
+        print('Sum3 = ', tmp3)
             
     return lngammaFe + lngammai0 - T1 - T2 + T3
