@@ -5,7 +5,7 @@ AO, AMg, AFe, ASi = 16, 24, 56, 28
 
 def mole2massconc_core(cbarO, cbarSi, cbarMgO):
 
-    AMgO = AMg #+ AO
+    AMgO = AMg + AO
     Abar = cbarO*AO + cbarSi*ASi + cbarMgO*AMgO + (1-cbarO-cbarSi-cbarMgO)*AFe
     cO   = cbarO  * AO  /Abar
     cSi  = cbarSi * ASi /Abar
