@@ -14,7 +14,7 @@ def mole2massconc_core(cbarO, cbarSi, cbarMgO):
 
 def mass2moleconc_core(cO, cSi, cMgO):
 
-    AMgO = AMg # AO
+    AMgO = AMg + AO
     Abar = 1 / (cO/AO + cSi/ASi + cMgO/AMgO + (1-cO-cSi-cMgO)/AFe)
     cbarO  = cO  / (AO  /Abar)
     cbarSi = cSi / (ASi /Abar)
@@ -48,9 +48,9 @@ def ln_gamma_Fe(X,eps,v):
     i = 0
     for xi in X:
         j = 0
-        if xi == 0 : 
-            i = i + 1
-            continue        
+        #if xi == 0 : 
+        #    i = i + 1
+        #    continue        
         for xj in X:
             if xj == 0 or i==j:  
                 j = j + 1
@@ -86,10 +86,7 @@ def ln_gamma_i(X, eps, lngammaFe, lngammai0, v):
     
     i = 0
     for xi in X:
-        j = 0
-        #if xi == 0 : 
-        #    i = i + 1
-        #    continue     
+        j = 0    
         for xj in X:
             if xj == 0 or i==j:  
                 j = j + 1
@@ -118,11 +115,14 @@ def min_conc_closure():
 
     params = {}
 
-    def min_conc(XMg, XO, XSi, XMgO_m, eps, lngamma0, logKd_MgO_B18, T):
+    def min_conc(XMg, XO, XSi, XMgO_m, eps, lngamma0, logKd_MgO_B18, T, opt):
             
         XO_tot = XO #+ XMg
         X_C    = np.array( [0.0 , XO_tot, XSi  , 0.0   , XMg] )
-
+        XFe    = 1-XO_tot-XSi-XMg
+        
+        XFeO   = 0.1
+        
         verb = 0
     
         lngammaFe  = ln_gamma_Fe(X_C,eps,verb)                       # eqn S3
@@ -131,7 +131,12 @@ def min_conc_closure():
         loggammaO  = lngammai[1]/2.303
         loggammaMg = lngammai[4]/2.303
 
-        XMg_ni  = Mg_dissolution(XMgO_m, 10**logKd_MgO_B18,loggammaO,loggammaMg)
+        if opt ==1:
+            XMg_ni  = Mg_dissolution( XMgO_m,         10**logKd_MgO_B18,loggammaO      ,loggammaMg)
+        elif opt == 2:
+            XMg_ni  = Mg_dissociation(XMgO_m, XO_tot, 10**logKd_MgO_B18,loggammaO      ,loggammaMg)  
+        elif opt == 3:
+            XMg_ni  = Mg_exchange(XMgO_m, XFe, XFeO,  10**logKd_MgO_B18,lngammaFe/2.303,loggammaMg)
         
         if verb == 1:
             # JBs eqn - gives same ans
@@ -165,11 +170,11 @@ def Si_exchange(XSi, XFe, XFeO, KSi):
     """
     return (XSi/KSi) * (XFeO/XFe)**2
 
-def Mg_exchange(XMgO, XFe, XFeO, KMg, loggammaO, loggammaMg):
+def Mg_exchange(XMgO, XFe, XFeO, KMg, loggammaFe, loggammaMg):
     """B18 eqn 10
         Returns the molar concentration of Mg in the metal based on an exchange reaction
     """
-    return 10**( np.log10(KMg) + np.log10(XFe*XMgO) - np.log10(XFeO) - loggammaO - loggammaMg)
+    return 10**( np.log10(KMg) + np.log10(XFe*XMgO) - np.log10(XFeO) + loggammaFe - loggammaMg)
 
 
 def Mg_dissolution(XMgO, KMg, loggammaO, loggammaMg):
@@ -190,4 +195,7 @@ def Mg_dissociation(XMgO, XO, KMg, loggammaO, loggammaMg):
     """B18 eqn 8
         Returns the molar concentration of Mg in the metal based on a dissociation reaction
     """
-    return 10**( np.log(XMgO) + np.log(KMg) - np.log(XO) - loggammaO - loggammaMg)
+    return 10**( np.log10(XMgO) + np.log10(KMg) - np.log10(XO) - loggammaO - loggammaMg)
+
+def D19_exchange(XO, XSi, Tcmb, P=135, a=-3.0, b=-2314.0, c=26.2, d=-10.0, e=1.6):
+    return a + b/Tcmb + c*P/Tcmb + d*np.log10(1.0-XO) + e*np.log10(1-XSi)

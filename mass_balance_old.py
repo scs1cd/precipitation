@@ -68,7 +68,7 @@ def rubie_closure():
 
     params = {}
         
-    def rubie(xp, KMg, KO, KSi, a, b, c, d, x, y, z, opt, verb):
+    def rubie(xp, KMg, KO, KSi, a, b, c, d, x, y, z):
     
         """Mass balance following the Supplement in Rubie et al 2011.
         a = Fe
@@ -82,12 +82,7 @@ def rubie_closure():
         Primes (p) denote new molar concentrations; unprimed variables are the current concentration. 
         """ 
         
-        if opt == 1:   #Std Rubie
-            Kyp = KMg
-        elif opt == 2: # Dissolution reaction for MgO
-            Kyp = KMg/KO
-        
-        yp = xp*(y+b) / ( (x+a-xp)*Kyp + xp )
+        yp = xp*(y+b) / ( (x+a-xp)*KMg + xp )
         
         ap    = x  + a - xp
         bp    = y  + b - yp
@@ -117,26 +112,19 @@ def rubie_closure():
             zp = zpm
             cp = x + y + 2*z + c - xp - yp - 2*zp
             dp = z + d - zp
-
-        XFe_c   = ap/(ap+bp+cp+dp)
-        XMg_c   = bp/(ap+bp+cp+dp)
+                
         XO_c    = cp/(ap+bp+cp+dp)
-        XSi_c   = dp/(ap+bp+cp+dp)
+        XFe_c   = ap/(ap+bp+cp+dp)
         XFeO_m  = xp/(xp+yp+zp)
-        XMgO_m  = yp/(xp+yp+zp)
-        XSiO2_m = zp/(xp+yp+zp)  
                
         KO_new  = XO_c * XFe_c / XFeO_m
-        KSi_new = (xp**2 * dp*(ap+bp+cp+dp))/(ap**2 * zp*(xp+yp+zp)) #2 lines should be the same
-        KSi_new2= (XSi_c/XSiO2_m) * (XFeO_m/XFe_c)**2
+        KSi_new = (xp**2 * dp*(ap+bp+cp+dp))/(ap**2 * zp*(xp+yp+zp))
+        KMg_new = xp*bp/(yp*ap)
+    
+        # Shows # moles are conserved for each species
+        #print('Fe_tot = ', x+a, xp+ap, 'Si_tot = ', z+d, zp+dp) 
+        #print('O_tot  = ', x+y+2*z+c , xp+yp+2*zp+cp , 'Mg_tot = ', y+b,yp+bp) 
         
-        if opt == 1:
-            KMg_new  = xp*bp/(yp*ap)
-            KMg_new2 = XFeO_m * XMg_c / (XMgO_m * XFe_c)
-        elif opt == 2: 
-            KMg_new  = XO_c * XMg_c / XMgO_m
-            KMg_new2 = XO_c * XMg_c / XMgO_m
-                  
         params['Fe']   = ap
         params['Mg']   = bp    
         params['O']    = cp
@@ -148,29 +136,21 @@ def rubie_closure():
         params['KSi']  = KSi
         params['KO_new']  = KO_new
         params['KSi_new'] = KSi_new
-        params['KSi_new2']= KSi_new2
         params['KMg_new'] = KMg_new
-        params['KMg_new2']= KMg_new2
         
-        if verb == 1:
-            #Shows # moles are conserved for each species
-            print('Fe_tot in, out = ', x+a, xp+ap, 'Si_tot in, out = ', z+d, zp+dp) 
-            print('O_tot in, out  = ', x+y+2*z+c , xp+yp+2*zp+cp , 'Mg_tot in, out = ', y+b,yp+bp) 
-            #print this out if you want to chk that the -ve root is conserving mass. 
-            #It is in all calculations I have looked at. 
-            print('Mass in,out_z+,out_z-,KO_old,KO_new = {:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(tot_in, tot_zpp, tot_zpm, KO, KO_new))
+        #print this out if you want to chk that the -ve root is conserving mass. 
+        #It is in all calculations I have looked at. 
+        #print('Mass in,out_z+,out_z-,KO_old,KO_new = {:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(tot_in, tot_zpp, tot_zpm, KO, KO_new))
 
         return KO - KO_new
     
     return params, rubie
 
-# Separate routine as this is quite different to std Rubie
-
 def dissolution_closure():
 
     params = {}
                
-    def dissolution(xp, KMg, KO, KSi, a, b, c, d, x, y, z, opt, verb):
+    def dissolution(xp, KMg, KO, KSi, a, b, c, d, x, y, z):
     
         """Mass balance following for dissolution reactions following
         the Supplement in Rubie et al 2011.
@@ -227,7 +207,11 @@ def dissolution_closure():
         KO_new  = XO_c * XFe_c / XFeO_m
         KSi_new = XSi_c * XO_c**2 / XSiO2_m
         KMg_new = XO_c * XMg_c / XMgO_m
-            
+    
+        # Shows # moles are conserved for each species
+        #print('Fe_tot = ', x+a, xp+ap, 'Si_tot = ', z+d, zp+dp) 
+        #print('O_tot  = ', x+y+2*z+c , xp+yp+2*zp+cp , 'Mg_tot = ', y+b,yp+bp) 
+        
         params['Fe']   = ap
         params['Mg']   = bp    
         params['O']    = cp
@@ -240,14 +224,10 @@ def dissolution_closure():
         params['KO_new']  = KO_new
         params['KSi_new'] = KSi_new
         params['KMg_new'] = KMg_new
-               
-        if verb == 1:
-            #Shows # moles are conserved for each species
-            print('Fe_tot = ', x+a, xp+ap, 'Si_tot = ', z+d, zp+dp) 
-            print('O_tot  = ', x+y+2*z+c , xp+yp+2*zp+cp , 'Mg_tot = ', y+b,yp+bp) 
-            #print this out if you want to chk that the -ve root is conserving mass. 
-            #It is in all calculations I have looked at. 
-            print('Mass in,out_z+,out_z-,KO_old,KO_new = {:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(tot_in, tot_zpp, tot_zpm, KO, KO_new))
+        
+        #print this out if you want to chk that the -ve root is conserving mass. 
+        #It is in all calculations I have looked at. 
+        #print('Mass in,out_z+,out_z-,KO_old,KO_new = {:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(tot_in, tot_zpp, tot_zpm, KO, KO_new))
 
         return KO - KO_new
     
@@ -290,7 +270,7 @@ def rubie_example():
     print(Kd_O, Kd_Mg, Kd_Si)
 
     params, rubie = rubie_closure()
-    rubie(MFeO, Kd_Mg, Kd_O, Kd_Si, MFe, MMg, MO, MSi, MFeO, MMgO, MSiO2, 1, 1)
+    rubie(MFeO, Kd_Mg, Kd_O, Kd_Si, MFe, MMg, MO, MSi, MFeO, MMgO, MSiO2)
     print('SiO2 = ', params['SiO2'], MSiO2)
     print('FeO  = ', params['FeO'] , MFeO) 
     print('MgO  = ', params['MgO'] , MMgO)  
@@ -298,29 +278,22 @@ def rubie_example():
     print('Si   = ', params['Si']  , MSi)
     print('O    = ', params['O']   , MO)
     print('Mg   = ', params['Mg']  , MMg)
-    print('Kd_Si= ', params['KSi_new']  , Kd_Si, params['KSi_new2'])
-    print('Kd_Mg= ', params['KMg_new']  , Kd_Mg, params['KMg_new2'])
+    print('Kd_Si= ', params['KSi_new']  , Kd_Si)
+    print('Kd_Mg= ', params['KMg_new']  , Kd_Mg)
     print('Kd_O = ', params['KO_new'], Kd_O)
     
     return
 
-def run_massbalance(M, K, Tcmb, var, verb):
+def run_massbalance(M, K, Tcmb, var):
         
     """Set up the inputs to the function rubie:
     Kd for Mg, O and Si, Tcmb and Mole fractions of all species"""
 
     if var == 1:
-        opt = 1
         params, rubie = rubie_closure()
-        print("MgO Exchange")
-    elif var == 3:
-        opt = 2
-        params, rubie = rubie_closure()
-        print("MgO Dissolution")
     else:
-        opt = 1
+        print('Dissolution')
         params, rubie = dissolution_closure()
-        print('MgO and SiO2 Dissolution')
     
     MFe, MO, MSi, MMg = M[0]*np.ones(len(Tcmb)),M[1]*np.ones(len(Tcmb)),M[2]*np.ones(len(Tcmb)),M[3]*np.ones(len(Tcmb))
     MFeO, MMgO, MSiO2 = M[4]*np.ones(len(Tcmb)),M[5]*np.ones(len(Tcmb)),M[6]*np.ones(len(Tcmb))
@@ -343,7 +316,7 @@ def run_massbalance(M, K, Tcmb, var, verb):
     for t in Tcmb:         
             
         optimize.brentq(rubie, 0.0001, 100, args=(Kd_Mg[tt], Kd_O[tt], Kd_Si[tt], MFei, 
-                                                  MMgi, MOi, MSii, MFeOi, MMgOi, MSiO2i, opt, verb))
+                                                  MMgi, MOi, MSii, MFeOi, MMgOi, MSiO2i))
 
         MFe[tt] , MO[tt]  , MSi[tt]  , MMg[tt] = params['Fe'] , params['O']  , params['Si']  , params['Mg']
         MFeO[tt], MMgO[tt], MSiO2[tt]          = params['FeO'], params['MgO'], params['SiO2']
@@ -365,11 +338,11 @@ def run_massbalance(M, K, Tcmb, var, verb):
     critlocO  = get_crit_loc(Tcmb, iX[1], oX[1])
     critlocSi = get_crit_loc(Tcmb, iX[2], oX[2])
     critlocMg = get_crit_loc(Tcmb, iX[3], oX[3])
-    critloccO  = get_crit_loc(Tcmb, iC[1], oC[1])
-    critloccSi = get_crit_loc(Tcmb, iC[2], oC[2])
-    critloccMg = get_crit_loc(Tcmb, iC[3], oC[3])
+    #critlocO  = get_crit_loc(Tcmb, iC[1], oC[1])
+    #critlocSi = get_crit_loc(Tcmb, iC[2], oC[2])
+    #critlocMg = get_crit_loc(Tcmb, iC[3], oC[3])
     
-    critloc = [critlocO, critlocSi, critlocMg,critloccO, critloccSi, critloccMg]
+    critloc = [critlocO, critlocSi, critlocMg]
         
     return iX, oX, iC, oC, critloc, oM
 
@@ -419,7 +392,7 @@ def plot_all(Tcmb, M, X, c, loc):
     
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12,10))
 
-    ax1.set_xlim([np.max(Tcmb),np.min(Tcmb)])
+    ax1.set_xlim([6000,4000])
     ax1.set_xlabel("$T$ (K)")
     ax1.set_ylabel("Number of moles $M_{i}$ ")
     ax1.plot(Tcmb, MFe  , color='black' , label="Fe")
@@ -431,7 +404,7 @@ def plot_all(Tcmb, M, X, c, loc):
     ax1.plot(Tcmb, MSiO2, color='orange', label="SiO2", linestyle=':')
     ax1.legend(loc=1)
 
-    ax3.set_xlim([np.max(Tcmb),np.min(Tcmb)])
+    ax3.set_xlim([5000,4000])
     #ax3.set_ylim([0,3])       # To compare to the Du plot. 
     ax3.set_xlabel("$T$ (K)")
     ax3.set_ylabel("Weight percent $c_{i}$ (wt\%)")
@@ -447,7 +420,7 @@ def plot_all(Tcmb, M, X, c, loc):
     Siloc = loc[1]
     Mgloc = loc[2]
 
-    ax2.set_xlim([np.max(Tcmb),np.min(Tcmb)])
+    ax2.set_xlim([5000,3000])
     ax2.set_xlabel("$T$ (K)")
     ax2.set_ylabel("Mole fractions $X_{i}$ ")
     ax2.plot(Tcmb, XFe  , color='black' , label="Fe")
@@ -469,7 +442,7 @@ def plot_all(Tcmb, M, X, c, loc):
     dcdT_O   = np.gradient(cO , dT)*1e5
     dcdT_Si  = np.gradient(cSi, dT)*1e5
     
-    ax4.set_xlim([np.max(Tcmb),np.min(Tcmb)])
+    ax4.set_xlim([6000,4000])
     ax4.set_xlabel("$T$ (K)")
     ax4.set_ylabel("Precipitation rate $dc_{i}/dT$ ($10^{-5}$/K)")
     ax4.plot(Tcmb, dcdT_Mg , color='red'   , label="Mg" , linestyle=':')
@@ -498,7 +471,7 @@ def plot_paper(Tcmb, M, X, c, loc):
     Siloc = loc[1]
     Mgloc = loc[2]
     
-    ax3.set_xlim([np.max(Tcmb),np.min(Tcmb)])
+    ax3.set_xlim([6000,3000])
     ax3.set_xlabel("$T$ (K)")
     ax3.set_ylabel("Weight percent $w_{i}$ (wt\%)")
     ax3.plot(Tcmb, cMg*100, color='red'   , label="Mg")
@@ -521,7 +494,7 @@ def plot_paper(Tcmb, M, X, c, loc):
 
     #ax4.set_ylim([0   ,5])
     #ax4.set_yscale('log')
-    ax4.set_xlim([np.max(Tcmb),np.min(Tcmb)])
+    ax4.set_xlim([6000,3000])
     ax4.set_xlabel("$T$ (K)")
     ax4.set_ylabel("Precipitation rate $d w_{i}^c/dT$ ($10^{-5}$/K)")
     ax4.plot(Tcmb, dcdT_Mg  , color='red'   , label="Mg"      , linestyle='-')
@@ -531,5 +504,3 @@ def plot_paper(Tcmb, M, X, c, loc):
     ax4.plot(Tcmb[Oloc] , dcdT_O[Oloc]     , color='blue'  , marker='o')
     ax4.plot(Tcmb[Siloc], dcdT_Si[Siloc]   , color='orange', marker='o')    
     ax4.legend()
-    
-    return fig, ax3, ax4
