@@ -309,6 +309,8 @@ def run_massbalance(M, K, Tcmb, var, verb):
     """Set up the inputs to the function rubie:
     Kd for Mg, O and Si, Tcmb and Mole fractions of all species"""
 
+    dT   = Tcmb[1]-Tcmb[0]
+    
     if var == 1:
         opt = 1
         params, rubie = rubie_closure()
@@ -316,11 +318,11 @@ def run_massbalance(M, K, Tcmb, var, verb):
     elif var == 3:
         opt = 2
         params, rubie = rubie_closure()
-        print("MgO Dissolution")
+        print("MgO Dissociation")
     else:
         opt = 1
         params, rubie = dissolution_closure()
-        print('MgO and SiO2 Dissolution')
+        print('MgO and SiO2 Dissociation')
     
     MFe, MO, MSi, MMg = M[0]*np.ones(len(Tcmb)),M[1]*np.ones(len(Tcmb)),M[2]*np.ones(len(Tcmb)),M[3]*np.ones(len(Tcmb))
     MFeO, MMgO, MSiO2 = M[4]*np.ones(len(Tcmb)),M[5]*np.ones(len(Tcmb)),M[6]*np.ones(len(Tcmb))
@@ -362,16 +364,20 @@ def run_massbalance(M, K, Tcmb, var, verb):
     cFeO_m1, cSiO2_m1, cMgO_m1 = mole2mass_mant(oX[4], oX[6], oX[5]) 
     oC = [0.0, cO_c1, cSi_c1, cMg_c1, cFeO_m1, cMgO_m1, cSiO2_m1]
 
-    critlocO  = get_crit_loc(Tcmb, iX[1], oX[1])
-    critlocSi = get_crit_loc(Tcmb, iX[2], oX[2])
-    critlocMg = get_crit_loc(Tcmb, iX[3], oX[3])
+    critlocO   = get_crit_loc(Tcmb, iX[1], oX[1])
+    critlocSi  = get_crit_loc(Tcmb, iX[2], oX[2])
+    critlocMg  = get_crit_loc(Tcmb, iX[3], oX[3])
     critloccO  = get_crit_loc(Tcmb, iC[1], oC[1])
     critloccSi = get_crit_loc(Tcmb, iC[2], oC[2])
-    critloccMg = get_crit_loc(Tcmb, iC[3], oC[3])
-    
-    critloc = [critlocO, critlocSi, critlocMg,critloccO, critloccSi, critloccMg]
+    critloccMg = get_crit_loc(Tcmb, iC[3], oC[3])  
+    critloc    = [critlocO, critlocSi, critlocMg,critloccO, critloccSi, critloccMg]
+       
+    dcdT_O     = np.gradient(cO_c1 , dT)*1e5
+    dcdT_Si    = np.gradient(cSi_c1, dT)*1e5
+    dcdT_Mg    = np.gradient(cMg_c1, dT)*1e5
+    dcdT       = [dcdT_O, dcdT_Si, dcdT_Mg]
         
-    return iX, oX, iC, oC, critloc, oM
+    return iX, oX, iC, oC, critloc, oM, dcdT
 
 def print_init_conc(X,c):
     
@@ -510,7 +516,7 @@ def plot_paper(Tcmb, M, X, c, loc):
     ax3.plot(Tcmb[Mgloc], cMg[Mgloc]*100   , color='red'   , marker='o')
     ax3.plot(Tcmb[Oloc] , cO[Oloc]*100     , color='blue'  , marker='o')
     ax3.plot(Tcmb[Siloc], cSi[Siloc]*100   , color='orange', marker='o')    
-    ax3.legend()
+    ax3.legend(ncol=2)
     
     dcdT_MgO = np.gradient(cMgO , dT)*1e5
     dcdT_FeO = np.gradient(cFeO , dT)*1e5
